@@ -1,0 +1,83 @@
+version: '2'
+
+services:
+    mysql:
+        image: mysql
+        ports:
+            - 3306:3306
+        volumes:
+            - ${MYSQL_DATADIR}:/var/lib/mysql
+        environment:
+            MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+            MYSQL_DATABASE: ${MYSQL_DATABASE}
+            MYSQL_USER: ${MYSQL_USER}
+            MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+    mongo:
+        build: mongo-alpine
+        volumes:
+            - ${MONGODB_DATADIR}:/data/db
+        ports:
+            - 27017:27017
+    redis:
+        image: redis:alpine
+        ports:
+            - 6379:6379
+    memcached:
+        image: memcached:alpine
+        ports:
+            - 11211:11211
+    rabbitmq:
+        image: rabbitmq:3-management
+        ports:
+            - 15672:15672
+            - 5672:5672
+    php:
+        build: php7-fpm-alpine
+        expose:
+            - 9000
+        volumes:
+            - ${SYMFONY_APP_PATH}:/var/www/html
+            - ${SYMFONY_LOG_PATH}:/var/www/html/var/logs
+        links:
+            - mysql
+            - mongo
+            - redis
+            - memcached
+            - rabbitmq
+    nginx:
+        build: nginx-alpine
+        ports:
+            - 80:80
+        links:
+            - php
+        volumes_from:
+            - php
+        volumes:
+            - ${NGINX_LOG_PATH}:/var/log/nginx
+    elastic:
+        image: elasticsearch
+        command: elasticsearch -Des.network.host=0.0.0.0
+        ports:
+            - 9200:9200
+            - 9300:9300
+    logstash:
+        image: logstash
+        command: logstash -f /etc/logstash/conf.d/logstash.conf
+        volumes:
+            - ${LS_CONFIG_PATH}:/etc/logstash/conf.d
+        volumes_from:
+            - php
+        ports:
+            - 5000:5000
+        environment:
+            - LS_HEAP_SIZE=${LS_HEAP_SIZE}
+        links:
+            - elastic
+    kibana:
+        image: kibana
+        volumes:
+            - ${KIBANA_CONFIG_PATH}:/opt/kibana/config/
+        ports:
+            - 5601:5601
+        links:
+            - elastic

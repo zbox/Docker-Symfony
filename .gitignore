@@ -1,0 +1,11 @@
+.env
+.data
+.idea
+!/log/nginx
+/log/nginx/*
+!log/nginx/.gitkeep
+!/log/symfony
+/log/symfony/*
+!log/symfony/.gitkeep
+/symfony
+
